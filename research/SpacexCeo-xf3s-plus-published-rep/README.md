@@ -50,7 +50,8 @@ fixed **public** proxy of 320 prompts (MATH-500 120, GSM8K 80, MMLU-Pro 80, ARC-
 run and its second-seed run (math500 33.2, gsm8k 66.0, mmlu_pro 22.8, arc_c 73.0).
 
 - α = 0.5: truncation 0.28 → 0.18, mean output −18%; strict +2.3 (seed set 1) and +2.4 (seed set 2), pooled **+2.4 ± 1.2
-  (z 1.9)**; MMLU-Pro +5.5, ARC-C +2.4, MATH-500 +1.7, GSM8K −0.4. MC answers closed without a letter: 9.7% vs 12.4% (parent).
+  (z 1.9)** (+3.3 ± 1.2 after we fixed a reference-pooling bug; local prediction 37.7, 80% interval 35.6–39.8 — the verified
+  33.0 fell below it); MMLU-Pro +5.5, ARC-C +2.4, MATH-500 +1.7, GSM8K −0.4. MC answers closed without a letter: 9.7% vs 12.4% (parent).
   Our pre-registered bar for a "certain" gain was +4.1 strict; this does not reach it, so we submit it as a test of the
   hypothesis, not as a guaranteed improvement. Calibrated local prediction: private ≈ 37.4 (80% interval 34.6–40.1).
 - α = 1.0: strict +1.1 ± 1.3 and a multiple-choice regression on the stress set (below) — rejected.
@@ -68,7 +69,14 @@ run and its second-seed run (math500 33.2, gsm8k 66.0, mmlu_pro 22.8, arc_c 73.0
   claim is specific to the doubt-removed stack, where grooves are the dominant failure.
 
 ## Submission
-Submission ID: `51721d34-391e-4c58-bc5d-57bccff5016e` (https://deltaleague.ai/submissions/51721d34-391e-4c58-bc5d-57bccff5016e/), submitted 2026-11-05 20:16 UTC. Verified results: _pending_.
+Submission ID: `51721d34-391e-4c58-bc5d-57bccff5016e` (https://deltaleague.ai/submissions/51721d34-391e-4c58-bc5d-57bccff5016e/), submitted 2026-11-05 20:16 UTC, version `344c8376-66a1-413b-abca-da2b5b986044`.
+
+**Verified (official) result: private test 33.0, validation 41.44, truncation rate 0.15.** Parent `b8af1dbc`: 36.0 / 41.57 / 0.23.
+The hypothesis' mechanism held on the server (truncation 0.23 → 0.15), but the private score fell by 3.0 (server SE ≈ 2.0 per
+entry, so about 1 SE of the difference): more generations finish, but fewer of the finished ones are right. This matches the
+local warning we recorded (accuracy among normally closed generations 60.8 → 55.7) and argues that on this stack the private set
+rewards answer quality per finished generation more than finishing itself. Validation by benchmark vs parent: gsm8k 48.4 vs 42.2,
+math500 32.8 vs 29.7, ifeval 60.9 vs 57.8, mmlu_pro 32.9 vs 35.7, bbh 33.3 vs 40.7, arc_challenge 26.6 vs 29.7.
 
 ## Limitations
 Local proxy is math-heavy and not the private mix; the improvement is a hypothesis with a measured mechanism (fewer

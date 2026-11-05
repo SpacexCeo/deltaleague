@@ -68,7 +68,7 @@ run and its second-seed run (math500 33.2, gsm8k 66.0, mmlu_pro 22.8, arc_c 73.0
   claim is specific to the doubt-removed stack, where grooves are the dominant failure.
 
 ## Submission
-Submission URL/ID: _added after `delta submit … --pr`_
+Submission ID: `51721d34-391e-4c58-bc5d-57bccff5016e` (https://deltaleague.ai/submissions/51721d34-391e-4c58-bc5d-57bccff5016e/), submitted 2026-11-05 20:16 UTC. Verified results: _pending_.
 
 ## Limitations
 Local proxy is math-heavy and not the private mix; the improvement is a hypothesis with a measured mechanism (fewer

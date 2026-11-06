@@ -1,0 +1,74 @@
+"""Rejection-sampling data for self-distillation (public TRAIN splits only; nothing from validation/test).
+usage: gen_rft.py MODEL_DIR OUT.jsonl N_SAMPLES [max_tokens] [shard_id n_shards]
+Samples with the competition sampler (T 1.0, top-k 20, top-p 0.95, presence 1.5, thinking on) and scores each sample."""
+import json, sys, os, re, random, time
+os.environ.setdefault("VLLM_USE_FLASHINFER_SAMPLER", "0")
+from vllm import LLM, SamplingParams
+from transformers import AutoTokenizer
+from datasets import load_dataset, get_dataset_config_names
+from math_verify import parse, verify
+from math_verify.parser import LatexExtractionConfig, ExprExtractionConfig
+CFG = [LatexExtractionConfig(), ExprExtractionConfig()]
+M = "\nPlease reason step by step, and put your final answer within \\boxed{}."
+MC = "\nAnswer with the letter of the correct option, written as \\boxed{X}."
+def boxed(s):
+    i = s.rfind('\\boxed{')
+    if i < 0: return None
+    j, d = i + 7, 1
+    while j < len(s) and d:
+        d += {'{': 1, '}': -1}.get(s[j], 0); j += 1
+    return s[i + 7:j - 1]
+def build(seed=20261106):
+    rng = random.Random(seed); P = []
+    def take(ds, n):
+        idx = list(range(len(ds))); rng.shuffle(idx); return [ds[i] for i in idx[:n]]
+    for d in take(load_dataset('openai/gsm8k', 'main', split='train'), 1400):
+        P.append({'src': 'gsm8k_train', 'prompt': d['question'] + M, 'answer': d['answer'].split('####')[-1].strip().replace(',', ''), 'scorer': 'math'})
+    math = []
+    for c in get_dataset_config_names('EleutherAI/hendrycks_math'):
+        for d in load_dataset('EleutherAI/hendrycks_math', c, split='train'):
+            if d['level'] in ('Level 1', 'Level 2', 'Level 3', 'Level 4') and boxed(d['solution']): math.append(d)
+    for d in take(math, 1600):
+        P.append({'src': 'math_train', 'prompt': d['problem'] + M, 'answer': boxed(d['solution']), 'scorer': 'math'})
+    for cfg, n in [('ARC-Challenge', 500), ('ARC-Easy', 300)]:
+        for d in take(load_dataset('allenai/ai2_arc', cfg, split='train'), n):
+            opts = '\n'.join(f'{l}. {t}' for l, t in zip(d['choices']['label'], d['choices']['text']))
+            P.append({'src': 'arc_train', 'prompt': f"{d['question']}\n\n{opts}" + MC, 'answer': d['answerKey'], 'scorer': 'mc'})
+    for d in take(load_dataset('cais/mmlu', 'auxiliary_train', split='train'), 600):
+        d = d.get('train', d)
+        opts = '\n'.join(f'{"ABCD"[i]}. {c}' for i, c in enumerate(d['choices']))
+        P.append({'src': 'mmlu_aux', 'prompt': f"{d['question']}\n\n{opts}" + MC, 'answer': "ABCD"[d['answer']], 'scorer': 'mc'})
+    for i, p in enumerate(P): p['id'] = i
+    return P
+def score(p, text):
+    if '</think>' not in text: return 0.0
+    ans = text.split('</think>')[-1]
+    if p['scorer'] == 'math':
+        g = parse('$' + str(p['answer']) + '$', extraction_config=CFG); pr = parse(ans, extraction_config=CFG)
+        return float(bool(g) and bool(pr) and verify(g, pr))
+    m = re.findall(r'\\boxed\{\s*(?:\\text\{)?([A-J])', ans)
+    return float(bool(m) and m[-1] == p['answer'])
+def main():
+    model, out, n = sys.argv[1], sys.argv[2], int(sys.argv[3])
+    mt = int(sys.argv[4]) if len(sys.argv) > 4 else 8192
+    shard, ns = (int(sys.argv[5]), int(sys.argv[6])) if len(sys.argv) > 6 else (0, 1)
+    P = [p for p in build() if p['id'] % ns == shard]
+    tok = AutoTokenizer.from_pretrained(model)
+    llm = LLM(model=model, dtype='bfloat16', max_model_len=mt + 2048, gpu_memory_utilization=float(os.environ.get('GPU_UTIL', '0.85')),
+              max_num_seqs=256, seed=0, enable_prefix_caching=True, limit_mm_per_prompt={'image': 0, 'video': 0})
+    reqs, meta = [], []
+    for p in P:
+        t = tok.apply_chat_template([{'role': 'user', 'content': p['prompt']}], tokenize=False, add_generation_prompt=True, enable_thinking=True)
+        for s in range(n): reqs.append(t); meta.append((p, s, t))
+    sp = [SamplingParams(temperature=1.0, top_p=0.95, top_k=20, presence_penalty=1.5, max_tokens=mt, seed=777 + 7919 * p['id'] + s) for p, s, _ in meta]
+    t0 = time.time(); outs = llm.generate(reqs, sp)
+    with open(out, 'w') as f:
+        for (p, s, t), o in zip(meta, outs):
+            c = o.outputs[0]; text = c.text
+            think = text.split('</think>')[0] if '</think>' in text else text
+            f.write(json.dumps({'id': p['id'], 'src': p['src'], 'sample': s, 'rendered_prompt': t, 'text': text, 'score': score(p, text),
+                                'closed': '</think>' in text, 'truncated': c.finish_reason == 'length', 'tokens': len(c.token_ids),
+                                'think_tokens': len(tok(think, add_special_tokens=False)['input_ids'])}) + '\n')
+    print('done', len(outs), 'gens in', round(time.time() - t0), 's')
+if __name__ == '__main__':
+    main()

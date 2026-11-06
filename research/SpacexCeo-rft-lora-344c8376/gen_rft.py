@@ -51,10 +51,42 @@ def build_v3(seed=20261107):
                       'test': (d.get('test_setup_code') or '') + '\n' + '\n'.join(d['test_list']) + '\n'})
     import ast as _ast
     for d in take(load_dataset('argilla/ifeval-like-data', 'filtered', split='train'), 900):
-        try: ids = _ast.literal_eval(d['instruction_id_list']); kw = json.loads(d['kwargs'])
+        try:
+            ids = d['instruction_id_list'] if isinstance(d['instruction_id_list'], list) else _ast.literal_eval(d['instruction_id_list'])
+            kw = d['kwargs'] if isinstance(d['kwargs'], list) else json.loads(d['kwargs'])
         except Exception: continue
         P.append({'src': 'ifeval_like', 'prompt': d['prompt'], 'scorer': 'ifeval', 'instruction_id_list': ids, 'kwargs': kw})
     for i, p in enumerate(P): p['id'] = 100000 + i
+    return P
+def build_v4(seed=20261108):
+    """private-like TRAIN mix: commonsense / science / reading MC, instruction following, code, a little math."""
+    rng = random.Random(seed); P = []
+    def take(ds, n):
+        idx = list(range(len(ds))); rng.shuffle(idx); return [ds[i] for i in idx[:n]]
+    L = 'ABCDEFGHIJ'
+    def mc(src, q, opts, g):
+        return {'src': src, 'prompt': q + '\n\n' + '\n'.join(f'{L[i]}. {o}' for i, o in enumerate(opts)) + MC, 'answer': L[g], 'scorer': 'mc'}
+    for d in take(load_dataset('tau/commonsense_qa', split='train'), 1400):
+        P.append(mc('csqa_train', d['question'], d['choices']['text'], d['choices']['label'].index(d['answerKey'])))
+    for cfg, n in [('ARC-Easy', 700), ('ARC-Challenge', 500)]:
+        for d in take(load_dataset('allenai/ai2_arc', cfg, split='train'), n):
+            if d['answerKey'] in d['choices']['label']:
+                P.append(mc('arc_train', d['question'], d['choices']['text'], d['choices']['label'].index(d['answerKey'])))
+    for d in take(load_dataset('allenai/winogrande', 'winogrande_xl', split='train'), 1200):
+        P.append(mc('wino_train', 'Choose the option that best fills the blank (_):\n' + d['sentence'], [d['option1'], d['option2']], int(d['answer']) - 1))
+    for d in take(load_dataset('aps/super_glue', 'boolq', split='train'), 600):
+        P.append(mc('boolq_train', f"{d['passage']}\n\nQuestion: {d['question']}?", ['Yes', 'No'], 0 if d['label'] == 1 else 1))
+    for d in take(load_dataset('baber/piqa', split='train'), 700):
+        P.append(mc('piqa_train', 'Goal: ' + d['goal'], [d['sol1'], d['sol2']], int(d['label'])))
+    for d in take(load_dataset('allenai/openbookqa', 'main', split='train'), 600):
+        P.append(mc('obqa_train', d['question_stem'], d['choices']['text'], d['choices']['label'].index(d['answerKey'])))
+    for d in take(load_dataset('cais/mmlu', 'auxiliary_train', split='train'), 600):
+        d = d.get('train', d); P.append(mc('mmlu_aux', d['question'], d['choices'], d['answer']))
+    v3 = build_v3()
+    P += [dict(p) for p in v3]                           # MBPP non-test + IFEval-like (fixed parser)
+    for d in take(load_dataset('openai/gsm8k', 'main', split='train'), 400):
+        P.append({'src': 'gsm8k_train', 'prompt': d['question'] + M, 'answer': d['answer'].split('####')[-1].strip().replace(',', ''), 'scorer': 'math'})
+    for i, p in enumerate(P): p['id'] = 200000 + i
     return P
 def score(p, text):
     if '</think>' not in text: return 0.0
@@ -87,7 +119,7 @@ def main():
     mt = int(sys.argv[4]) if len(sys.argv) > 4 else 8192
     shard, ns = (int(sys.argv[5]), int(sys.argv[6])) if len(sys.argv) > 6 else (0, 1)
     seed_off = int(os.environ.get('SEED_OFFSET', '0')); pset = os.environ.get('PSET', 'v1')
-    P = [p for p in (build() if pset == 'v1' else build_v3()) if p['id'] % ns == shard]
+    P = [p for p in {'v1': build, 'v3': build_v3, 'v4': build_v4}[pset]() if p['id'] % ns == shard]
     tok = AutoTokenizer.from_pretrained(model)
     llm = LLM(model=model, dtype='bfloat16', max_model_len=mt + 2048, gpu_memory_utilization=float(os.environ.get('GPU_UTIL', '0.85')),
               max_num_seqs=256, seed=0, enable_prefix_caching=True, limit_mm_per_prompt={'image': 0, 'video': 0})

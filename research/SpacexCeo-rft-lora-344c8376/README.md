@@ -85,3 +85,57 @@ record this as the main negative finding of the experiment.
 ## Limitations
 The proxy is math-heavy; self-distillation can shift answer style (checked with a stress set incl. IFEval/HumanEval/MBPP/MMLU).
 The official private score decides.
+
+---
+
+## Second entry: v6 LoRA on cd0b95bb (2026-11-06, afternoon)
+
+### Hypothesis
+v3 raised strict locally but scored 32.4 private. Two suspected causes: (1) keeping the *shortest* correct trace taught the model to
+shorten its reasoning, which lowered accuracy on math (proxy B: GSM8K −5, MATH-500 −3.8 for the shortest-trace v5); (2) the
+training mix was 60% math while private looks broader. A median-length trace and a broader public train mix should keep reasoning
+length and raise accuracy on the benches that track private (see `PROXYB-CALIBRATION.md`). Separately, poppingbean's
+`cd0b95bb` (344c8376 + ×1.05 final-norm gain taken from our `27e49fd4`) scored 37.2 private; the norm gain and the LoRA touch
+disjoint tensors, so the LoRA is applied on top of it.
+
+### Method (differences from v3)
+- Data (`gen_rft.py`, `PSET=v4`, ids from 200000): 8,074 public TRAIN prompts — CommonsenseQA train 1,400, ARC train 1,200,
+  Winogrande train 1,200, IFEval-like (argilla/ifeval-like-data) 900, PIQA train 700, BoolQ train 600, OpenBookQA train 600,
+  MMLU auxiliary_train 600, MBPP non-test 474, GSM8K train 400 — 2 samples each from 344c8376, 6,144-token cap; pooled with the
+  v1/v3 generations → 35,644 generations.
+- Selection (`select_rft.py --pick median --math_per 2`): per prompt, the median-length sample among correct, closed, ≥ 50
+  thinking tokens, not truncated; two per GSM8K/MATH prompt → 11,763 traces (GSM8K 2,689, MATH 2,164, ARC 1,820, MMLU-aux 959,
+  CSQA 946, Winogrande 892, IFEval-like 580, PIQA 538, BoolQ 509, OBQA 461, MBPP 205), mean 1,023 tokens.
+- Training: same as v3 (r 16, alpha 32, lr 5e-5, 1 epoch, ~64k tokens/step, 203 steps, final loss ≈ 0.35, 54 min on one GPU),
+  trained against 344c8376.
+- Submission: the same LoRA tensors re-targeted at parent `cd0b95bb-c5c0-4656-b9be-ad6482f04075` (`rebase_lora.py`; only the
+  manifest's parent fields change). The two edits touch disjoint tensors (final norm vs. layer projections).
+
+### Evidence (local, advisory)
+proxy400 strict, 2 seed sets × 3 samples, paired by prompt (A1 predictor, `agents/a1/predict.py` in our sprint handoff):
+
+| model | vs pooled b8af1dbc ref | vs cd0b95bb | A1 decision |
+|---|---|---|---|
+| cd0b95bb (server 37.2) | +3.39 ± 1.21 | — | reject (screen 3.5) |
+| v6 on 344c8376 | +5.68 ± 1.14 | +2.29 ± 1.10 | submit |
+| **v6 on cd0b95bb (submitted)** | **+5.42 ± 1.17** | **+2.03 ± 1.03** | **submit** |
+| v5 (shortest traces) on cd0b95bb | +4.01 ± 1.23 | +0.63 ± 1.19 | reject (acc among healthy −5.9) |
+
+Stress set (265 prompts × 3 samples), accuracy, 344c8376 / v6 / v6-on-cd0b95bb: GSM8K 59/62/59, MATH-500 36/36/35, MMLU 43/49/48,
+BBH 28/39/43, IFEval 58/62/62, HumanEval 32/31/39, MBPP 32/34/42; all 43/45/47. Truncation 6.8% / 5.7% / 6.5%. The 5 fixed
+prompts close in 15/15 samples.
+
+Proxy B (460 public test items weighted to private-correlated benches, 2 seed sets × 2 samples): v6 on 344c8376 57.7 vs parent
+57.3 (no clear change); v5 58.4.
+
+### Negative findings
+- Shortest-trace selection on the broad mix (v5): BBH/MMLU/Winogrande up, GSM8K/MATH down, accuracy among finished answers
+  −6; adds nothing on top of the ×1.05 norm gain (+0.6 vs cd0b95bb).
+- Scaling the v5 LoRA ×1.5: worse than ×1.0 on proxy B (+0.6 vs +1.1).
+- A1 is not reliable at the top: it passed v3 (server 32.4) and rejects cd0b95bb (server 37.2). Proxy B calibrated on 14 board
+  checkpoints predicts private with LOO RMSE 2.2, the same size as private re-evaluation noise, so this entry is an option on a
+  locally positive candidate, not a confirmed gain.
+
+### Lineage and credit
+`0ea62f40` → `a9340e14` → `b8af1dbc` → `344c8376` (SpacexCeo) → `cd0b95bb` (poppingbean: ×1.05 final-norm gain from SpacexCeo's
+`27e49fd4`) → this entry (SpacexCeo: v6 LoRA).

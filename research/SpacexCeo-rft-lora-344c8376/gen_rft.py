@@ -40,9 +40,43 @@ def build(seed=20261106):
         P.append({'src': 'mmlu_aux', 'prompt': f"{d['question']}\n\n{opts}" + MC, 'answer': "ABCD"[d['answer']], 'scorer': 'mc'})
     for i, p in enumerate(P): p['id'] = i
     return P
+def build_v3(seed=20261107):
+    rng = random.Random(seed); P = []
+    def take(ds, n):
+        idx = list(range(len(ds))); rng.shuffle(idx); return [ds[i] for i in idx[:n]]
+    for split in ('train', 'validation', 'prompt'):                       # MBPP non-test splits only
+        for d in load_dataset('google-research-datasets/mbpp', 'full', split=split):
+            P.append({'src': 'mbpp_train', 'prompt': d['text'] + "\nYour code should pass these tests:\n" + '\n'.join(d['test_list']) +
+                      "\nReturn the solution in a ```python code block.", 'scorer': 'code',
+                      'test': (d.get('test_setup_code') or '') + '\n' + '\n'.join(d['test_list']) + '\n'})
+    import ast as _ast
+    for d in take(load_dataset('argilla/ifeval-like-data', 'filtered', split='train'), 900):
+        try: ids = _ast.literal_eval(d['instruction_id_list']); kw = json.loads(d['kwargs'])
+        except Exception: continue
+        P.append({'src': 'ifeval_like', 'prompt': d['prompt'], 'scorer': 'ifeval', 'instruction_id_list': ids, 'kwargs': kw})
+    for i, p in enumerate(P): p['id'] = 100000 + i
+    return P
 def score(p, text):
     if '</think>' not in text: return 0.0
     ans = text.split('</think>')[-1]
+    if p['scorer'] == 'code':
+        import subprocess, tempfile
+        blocks = re.findall(r'```(?:python)?\n(.*?)```', ans, re.S)
+        if not blocks: return 0.0
+        with tempfile.NamedTemporaryFile('w', suffix='.py', delete=False) as f: f.write(blocks[-1] + '\n\n' + p['test']); fn = f.name
+        try: return float(subprocess.run(['python3', fn], capture_output=True, timeout=15).returncode == 0)
+        except Exception: return 0.0
+    if p['scorer'] == 'ifeval':
+        from lm_eval.tasks.ifeval.instructions_registry import INSTRUCTION_DICT
+        ok = []
+        try:
+            for iid, kw in zip(p['instruction_id_list'], p['kwargs']):
+                ins = INSTRUCTION_DICT[iid](iid); ins.build_description(**{k: v for k, v in (kw or {}).items() if v is not None})
+                a = ins.get_instruction_args()
+                if a and 'prompt' in a: ins.build_description(prompt=p['prompt'])
+                ok.append(bool(ans.strip()) and ins.check_following(ans.strip()))
+        except Exception: return 0.0
+        return float(bool(ok) and all(ok))
     if p['scorer'] == 'math':
         g = parse('$' + str(p['answer']) + '$', extraction_config=CFG); pr = parse(ans, extraction_config=CFG)
         return float(bool(g) and bool(pr) and verify(g, pr))
@@ -52,7 +86,8 @@ def main():
     model, out, n = sys.argv[1], sys.argv[2], int(sys.argv[3])
     mt = int(sys.argv[4]) if len(sys.argv) > 4 else 8192
     shard, ns = (int(sys.argv[5]), int(sys.argv[6])) if len(sys.argv) > 6 else (0, 1)
-    P = [p for p in build() if p['id'] % ns == shard]
+    seed_off = int(os.environ.get('SEED_OFFSET', '0')); pset = os.environ.get('PSET', 'v1')
+    P = [p for p in (build() if pset == 'v1' else build_v3()) if p['id'] % ns == shard]
     tok = AutoTokenizer.from_pretrained(model)
     llm = LLM(model=model, dtype='bfloat16', max_model_len=mt + 2048, gpu_memory_utilization=float(os.environ.get('GPU_UTIL', '0.85')),
               max_num_seqs=256, seed=0, enable_prefix_caching=True, limit_mm_per_prompt={'image': 0, 'video': 0})
@@ -60,13 +95,13 @@ def main():
     for p in P:
         t = tok.apply_chat_template([{'role': 'user', 'content': p['prompt']}], tokenize=False, add_generation_prompt=True, enable_thinking=True)
         for s in range(n): reqs.append(t); meta.append((p, s, t))
-    sp = [SamplingParams(temperature=1.0, top_p=0.95, top_k=20, presence_penalty=1.5, max_tokens=mt, seed=777 + 7919 * p['id'] + s) for p, s, _ in meta]
+    sp = [SamplingParams(temperature=1.0, top_p=0.95, top_k=20, presence_penalty=1.5, max_tokens=mt, seed=777 + seed_off + 7919 * p['id'] + s) for p, s, _ in meta]
     t0 = time.time(); outs = llm.generate(reqs, sp)
     with open(out, 'w') as f:
         for (p, s, t), o in zip(meta, outs):
             c = o.outputs[0]; text = c.text
             think = text.split('</think>')[0] if '</think>' in text else text
-            f.write(json.dumps({'id': p['id'], 'src': p['src'], 'sample': s, 'rendered_prompt': t, 'text': text, 'score': score(p, text),
+            f.write(json.dumps({'id': p['id'], 'src': p['src'], 'sample': s + seed_off, 'rendered_prompt': t, 'text': text, 'score': score(p, text),
                                 'closed': '</think>' in text, 'truncated': c.finish_reason == 'length', 'tokens': len(c.token_ids),
                                 'think_tokens': len(tok(think, add_special_tokens=False)['input_ids'])}) + '\n')
     print('done', len(outs), 'gens in', round(time.time() - t0), 's')

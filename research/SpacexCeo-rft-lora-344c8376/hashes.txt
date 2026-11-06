@@ -1,2 +1,2 @@
-LoRA patch weights.safetensors sha256: 04aaf7f7bc3c64623ee2c15e7c732721eb7a022354c6686a429d90176b2d91c9 (40,917,480 bytes, format lora, 150 tensors, alpha 32, r 16)
+SUBMITTED (v3): LoRA patch weights.safetensors sha256: 9b8a199f9bb033463301dd6a4da3b330c3464695d15e1bfd2a141c770767d486 (40,917,480 bytes, format lora, 150 tensors, alpha 32, r 16)
 parent 344c8376 content hash: a432d0987dd4ed9d31fa58422820e5f228f433a93fff629ed2fb5b1b122e2544

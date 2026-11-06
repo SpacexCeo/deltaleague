@@ -139,3 +139,11 @@ Proxy B (460 public test items weighted to private-correlated benches, 2 seed se
 ### Lineage and credit
 `0ea62f40` → `a9340e14` → `b8af1dbc` → `344c8376` (SpacexCeo) → `cd0b95bb` (poppingbean: ×1.05 final-norm gain from SpacexCeo's
 `27e49fd4`) → this entry (SpacexCeo: v6 LoRA).
+
+### Verified result (v6 on cd0b95bb)
+Submission `6f927dec-be15-4f7f-8fac-eb58c8c61751` → version `cfe73117-f16a-4858-a5a4-a7bdf39747b9`: private test **34.6**
+(SE 2.13), validation 40.28, truncation 14.6%. Parent cd0b95bb scored 37.2 (SE 2.16); 344c8376 35.0. The LoRA did not add
+on top of the norm gain on the server: the difference (−2.6) is about one standard error of the difference, so the honest reading
+is "no measurable gain", consistent with v3 (32.4). Self-distillation on the model's own correct traces raised every local proxy
+(proxy400 strict +5, stress +6) but did not move private in two entries; local proxies built from public test splits do not
+capture what the private set rewards for this kind of edit.

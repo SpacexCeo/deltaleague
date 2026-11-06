@@ -72,7 +72,7 @@ Digit/letter row sharpening (s 1.15: +0.1, s 1.30: −7.8 strict); final-norm ga
 14–15 (−0.8); published edit on layer 15 only (+2.6 vs b8af1dbc, same mechanism as the parent). See also research PR #24.
 
 ## Submission
-Submission URL/ID: _added after `delta submit … --pr`_
+Submission ID: `7123caf3-b7b1-4b53-bf5b-5e1e4f14e2d4` (https://deltaleague.ai/submissions/7123caf3-b7b1-4b53-bf5b-5e1e4f14e2d4/), submitted 2026-11-06. Verified results: _pending_.
 
 ## Limitations
 The proxy is math-heavy; self-distillation can shift answer style (checked with a stress set incl. IFEval/HumanEval/MBPP/MMLU).

@@ -2,6 +2,14 @@
 
 Owner: SpacexCeo (RAEN). Competition `qwen35-08b-v1` (Qwen3.5-0.8B), config `public-ladder500-8k-v2`. Rank = PRIVATE test only.
 
+## UPDATE 06.11 07:30 UTC — compute changed
+Boxes 1–4 (5090, 4090, 2× 5070 Ti) expired overnight: their data is gone, including the round-2 queue (v2_g105, v2_dx17,
+v2_g110, r2b_dig115, r2b_dl115, r2a_a1, r2a_a05 — never scored) and the remote checkpoints/generations. Only v2_dx15 was scored (REJECT).
+New box 5: 2× RTX 5070 Ti 16 GB, Jupyter at / (token auth, credentials with the owner). Ready: ~/venv (vLLM), ~/dl with
+b8af1dbc checkpoint, prompt sets (proxy400, proxy_s2, stress), xf3s direction, upstream edit, runner.py running on GPU 0,
+and the full handoff archive ~/sprint_handoff.tar.gz (sha256 56940f08…2603). The xf3s reference (ref_xf3s_x4 etc.) must be
+re-run on the new hardware before comparing new candidates (vLLM results depend on hardware/batching).
+
 ## State at handoff
 - Leaderboard #1: `b8af1dbc-d52b-4bbc-a302-3505d897303c` (xf3s, a9340e14 + doubt-direction projection L0–13 + L16 n998 ×−2),
   private 36.0 / val 41.57 / trunc 0.23. Its own gentler dose (doubt ×0.85, d6b5f7e3) = 33.2; mihaikoodo 632210ae = 33.8 →

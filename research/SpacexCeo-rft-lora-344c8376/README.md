@@ -122,7 +122,7 @@ proxy400 strict, 2 seed sets × 3 samples, paired by prompt (A1 predictor, `agen
 | v5 (shortest traces) on cd0b95bb | +4.01 ± 1.23 | +0.63 ± 1.19 | reject (acc among healthy −5.9) |
 
 Stress set (265 prompts × 3 samples), accuracy, 344c8376 / v6 / v6-on-cd0b95bb: GSM8K 59/62/59, MATH-500 36/36/35, MMLU 43/49/48,
-BBH 28/39/43, IFEval 58/62/62, HumanEval 32/31/39, MBPP 32/34/42; all 43/45/47. Truncation 6.8% / 5.7% / 6.5%. The 5 fixed
+BBH 28/39/43, IFEval 58/62/62, HumanEval 32/31/39, MBPP 32/34/42; all 41/45/47. Truncation 6.8% / 5.7% / 6.5%. The 5 fixed
 prompts close in 15/15 samples.
 
 Proxy B (460 public test items weighted to private-correlated benches, 2 seed sets × 2 samples): v6 on 344c8376 57.7 vs parent

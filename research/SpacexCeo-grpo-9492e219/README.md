@@ -69,3 +69,8 @@ mbpp 41.1 → 40.0; truncation 5.4% → 6.4%, closed 94.7% → 97.0%). Adding th
 Robustness checks (proxy400 s1+s2 vs 9492e219): the same recipe with another seed (run7, step 10) gives acc +2.86 ± 1.14
 but truncation +8.75 — the length drift depends on the seed; a uniform soup of run5/run7 step 10 gives acc +3.59 ± 1.08,
 truncation +5.62. run5 step 10 has the best accuracy/truncation trade-off and is the submitted candidate.
+
+## Verified result
+Submission: GRPO run5 step 10 on 9492e219 (version `18db9b31-ffe9-427e-9e82-cfb66a0bfc80`, config public-thinking8k-ladder500-v1).
+**Private test 47.4 (SE 2.24), truncation 0.132, validation 42.82 — rank #1 at scoring time** (vs 9492e219 43.6;
+79be46a9 = 9492e219 + norm ×1.05: 46.2; d5fc95ea = 9492e219 + 36 GRPO steps: 47.2).

@@ -43,3 +43,21 @@ Patch: one tensor (`model.language_model.norm.weight`, (1+w) × 1.05), parent 94
 Seed set 2 of the candidate ran on an RTX 3090 while the reference ran on an RTX 5070 Ti (vLLM numerics can differ).
 Lesson: continuing GRPO from 9492e219 with our prompt pools is unstable within 5–15 steps; format guards (single
 `</think>`) are needed from step 1 and length shaping in either direction is harmful.
+
+## Best GRPO checkpoint: run5 step 10 (second candidate)
+Config: parent 9492e219, pool = public TRAIN math + MC (6300 prompts, `make_pool.py` ∪ `make_pool_hard.py`), 32 prompts × 8
+samples per step at the server sampler, reward = correct ∧ single `</think>` ∧ closed ∧ not truncated (no length shaping),
+mean-centred advantage (no std), one AdamW step per batch, lr 2e-6 with 2-step warmup, embeddings frozen, fp32 masters.
+Checkpoints every 5 steps; step 10 selected on proxy400 (step 20 drifts to longer thinking: truncation 24%).
+
+| proxy400 (3 samples/prompt) | acc | truncation | acc on finished |
+|---|---|---|---|
+| 9492e219, seed sets 1+2 | 45.4 | 11.9% | 53.0 |
+| run5 step 5, seed set 1 | 47.7 (paired +1.04 ± 1.57) | 11.8% | 53.6 |
+| **run5 step 10, seed sets 1+2** | **50.2 (paired +4.79 ± 1.16)** | 14.4% (+2.5 ± 0.8) | 58.4 |
+| run5 step 20, seed set 1 | 46.0 (−0.62) | 24.0% | 59.7 |
+| run6 (hard pool only) step 10, seed set 1 | 45.8 (−0.83) | 20.6% | 57.0 |
+
+Per benchmark (step 10 vs 9492e219, pooled): math500 36.4 vs 37.5, gsm8k 70.2 vs 67.1, mmlu_pro 35.6 vs 26.2, arc_c 80.8 vs 64.2.
+Risk: private correlates with truncation across the board, and this checkpoint truncates 2.5 points more on proxy400.
+Patch: 264 modified tensors vs 9492e219 (`delta patch build`), checkpoint sha256 b86ac75f…0e03.

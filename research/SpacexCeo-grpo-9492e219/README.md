@@ -74,3 +74,9 @@ truncation +5.62. run5 step 10 has the best accuracy/truncation trade-off and is
 Submission: GRPO run5 step 10 on 9492e219 (version `18db9b31-ffe9-427e-9e82-cfb66a0bfc80`, config public-thinking8k-ladder500-v1).
 **Private test 47.4 (SE 2.24), truncation 0.132, validation 42.82 — rank #1 at scoring time** (vs 9492e219 43.6;
 79be46a9 = 9492e219 + norm ×1.05: 46.2; d5fc95ea = 9492e219 + 36 GRPO steps: 47.2).
+
+## Second submission: run5 step 10 + final norm ×1.05
+Patch vs 9492e219: the 264 tensors of the run5 step-10 patch plus `model.language_model.norm.weight` with (1+w) × 1.05
+(poppingbean's edit, ilblackdragon/deltaleague#43). Server history of a single ×1.05 step: +1.4 (b8af1dbc), +2.2 (344c8376),
++2.6 (9492e219 → 79be46a9). Local proxy400 s1+s2 on our checkpoint: −0.99 ± 1.05 vs step 10 (inside noise). Submitted as a
+test of whether the norm gain still adds after further GRPO.

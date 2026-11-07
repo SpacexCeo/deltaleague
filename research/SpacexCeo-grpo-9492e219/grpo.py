@@ -35,12 +35,12 @@ def gen_main(ckpt, pfile, out, group, seed):
             closed = THINK_END in ids; trunc = c.finish_reason == 'length'
             think = ids.index(THINK_END) if closed else len(ids)
             sc = score(p, text) if closed else 0.0
-            r = float(sc == 1.0 and closed and not trunc and think >= STRICT_MIN_THINK)
+            r = float(sc == 1.0 and closed and not trunc and think >= STRICT_MIN_THINK and ids.count(THINK_END) == 1)
             f.write(json.dumps({'id': p['id'], 'src': p['src'], 's': s, 'prompt_ids': list(o.prompt_token_ids), 'ids': ids, 'reward': r,
                                 'score': sc, 'closed': closed, 'trunc': trunc, 'think': think}) + '\n')
     print('gen done', len(outs), round(time.time() - t0), 's', flush=True)
 
-def train_main(start, work, steps, n_prompts, group, lr):
+def train_main(start, work, steps, n_prompts, group, lr, adv_mode='std', overlong=0, warmup=0, lenpen=0.0):
     import torch
     from safetensors import safe_open
     from safetensors.torch import save_file
@@ -58,7 +58,7 @@ def train_main(start, work, steps, n_prompts, group, lr):
     for n, p in m.named_parameters():
         p.requires_grad = n.startswith('model.language_model.') and 'embed_tokens' not in n
     train = [p for p in m.parameters() if p.requires_grad]
-    say('trainable params', sum(p.numel() for p in train), 'frozen', sum(p.numel() for p in m.parameters() if not p.requires_grad))
+    say('config', json.dumps({'lr': lr, 'adv': adv_mode, 'overlong': overlong, 'warmup': warmup, 'lenpen': lenpen, 'min_think': STRICT_MIN_THINK})); say('trainable params', sum(p.numel() for p in train), 'frozen', sum(p.numel() for p in m.parameters() if not p.requires_grad))
     E = LM.embed_tokens.weight  # tied head, frozen
     for p in m.parameters():
         if not p.requires_grad: p.data = p.data.to(torch.bfloat16)
@@ -110,14 +110,24 @@ def train_main(start, work, steps, n_prompts, group, lr):
         by = {}
         for r in R: by.setdefault(r['id'], []).append(r)
         items = []
+        def shaped(r):  # DAPO-style soft overlong penalty on correct finished answers inside the last `overlong` tokens
+            x = r['reward']
+            if overlong and x > 0: x = x - 0.5 * min(1.0, max(0.0, (len(r['ids']) - (MAXTOK - overlong)) / overlong))
+            return x
+        def kimi(g, rs):  # Kimi k1.5 in-group length reward: correct get +w*lam, wrong get +w*min(0, lam)
+            if not lenpen: return rs
+            L = [len(r['ids']) for r in g]; lo, hi = min(L), max(L)
+            if hi == lo: return rs
+            return [x + lenpen * ((0.5 - (l - lo) / (hi - lo)) if r['reward'] > 0 else min(0.0, 0.5 - (l - lo) / (hi - lo))) for r, x, l in zip(g, rs, L)]
         for g in by.values():
-            rs = [r['reward'] for r in g]; mu = sum(rs) / len(rs); sd = (sum((x - mu) ** 2 for x in rs) / len(rs)) ** .5
+            rs = kimi(g, [shaped(r) for r in g]); mu = sum(rs) / len(rs); sd = (sum((x - mu) ** 2 for x in rs) / len(rs)) ** .5
             if sd < 1e-6: continue
-            items += [(r, (r['reward'] - mu) / (sd + 1e-4)) for r in g]
+            items += [(r, (x - mu) / (sd + 1e-4) if adv_mode == 'std' else (x - mu)) for r, x in zip(g, rs)]
         stats = {'reward': round(sum(r['reward'] for r in R) / len(R), 4), 'trunc': round(sum(r['trunc'] for r in R) / len(R), 4),
                  'len': round(sum(len(r['ids']) for r in R) / len(R)), 'groups_used': sum(1 for g in by.values() if len(set(r['reward'] for r in g)) > 1),
                  'groups': len(by), 'seqs': len(items)}
         if items:
+            for gr in opt.param_groups: gr['lr'] = lr * min(1.0, step / warmup) if warmup else lr
             opt.zero_grad(set_to_none=True); norm = len(items) * MAXTOK
             items.sort(key=lambda it: -len(it[0]['ids']))
             for r, adv in items:
@@ -137,4 +147,4 @@ if __name__ == '__main__':
     else:
         a = sys.argv
         opt = lambda k, d: type(d)(a[a.index(k) + 1]) if k in a else d
-        train_main(a[2], a[3], opt('--steps', 20), opt('--prompts', 32), opt('--group', 8), opt('--lr', 2e-6))
+        train_main(a[2], a[3], opt('--steps', 20), opt('--prompts', 32), opt('--group', 8), opt('--lr', 2e-6), opt('--adv', 'std'), opt('--overlong', 0), opt('--warmup', 0), opt('--lenpen', 0.0))

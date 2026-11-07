@@ -65,3 +65,7 @@ Stress set (265 public prompts + 5 fixed, 3 samples, server sampler): 9492e219 4
 (bbh 40.0 → 52.5, mmlu 36.7 → 47.5, gsm8k 64.2 → 68.3, math500 30.0 → 34.2, ifeval 70.0 → 73.3, humaneval 38.9 → 37.8,
 mbpp 41.1 → 40.0; truncation 5.4% → 6.4%, closed 94.7% → 97.0%). Adding the ×1.05 norm on top of step 10 does not help
 (proxy400 s1+s2: −0.99 ± 1.05 vs step 10).
+
+Robustness checks (proxy400 s1+s2 vs 9492e219): the same recipe with another seed (run7, step 10) gives acc +2.86 ± 1.14
+but truncation +8.75 — the length drift depends on the seed; a uniform soup of run5/run7 step 10 gives acc +3.59 ± 1.08,
+truncation +5.62. run5 step 10 has the best accuracy/truncation trade-off and is the submitted candidate.

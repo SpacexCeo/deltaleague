@@ -80,3 +80,5 @@ Patch vs 9492e219: the 264 tensors of the run5 step-10 patch plus `model.languag
 (poppingbean's edit, ilblackdragon/deltaleague#43). Server history of a single ×1.05 step: +1.4 (b8af1dbc), +2.2 (344c8376),
 +2.6 (9492e219 → 79be46a9). Local proxy400 s1+s2 on our checkpoint: −0.99 ± 1.05 vs step 10 (inside noise). Submitted as a
 test of whether the norm gain still adds after further GRPO.
+**Verified: private 48.0 (version `5dbf1229-af50-443f-8cd0-117f4688f4ed`), truncation 0.134 — rank #1**, +0.6 over the
+step-10 checkpoint alone (47.4). The single ×1.05 final-norm step has now added on the server on four parents.

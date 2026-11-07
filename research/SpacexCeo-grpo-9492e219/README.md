@@ -61,3 +61,7 @@ Checkpoints every 5 steps; step 10 selected on proxy400 (step 20 drifts to longe
 Per benchmark (step 10 vs 9492e219, pooled): math500 36.4 vs 37.5, gsm8k 70.2 vs 67.1, mmlu_pro 35.6 vs 26.2, arc_c 80.8 vs 64.2.
 Risk: private correlates with truncation across the board, and this checkpoint truncates 2.5 points more on proxy400.
 Patch: 264 modified tensors vs 9492e219 (`delta patch build`), checkpoint sha256 b86ac75f…0e03.
+Stress set (265 public prompts + 5 fixed, 3 samples, server sampler): 9492e219 45.4 → run5 step 10 **50.4**
+(bbh 40.0 → 52.5, mmlu 36.7 → 47.5, gsm8k 64.2 → 68.3, math500 30.0 → 34.2, ifeval 70.0 → 73.3, humaneval 38.9 → 37.8,
+mbpp 41.1 → 40.0; truncation 5.4% → 6.4%, closed 94.7% → 97.0%). Adding the ×1.05 norm on top of step 10 does not help
+(proxy400 s1+s2: −0.99 ± 1.05 vs step 10).

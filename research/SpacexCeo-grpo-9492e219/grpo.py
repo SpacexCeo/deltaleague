@@ -48,7 +48,7 @@ def train_main(start, work, steps, n_prompts, group, lr, adv_mode='std', overlon
     os.makedirs(work, exist_ok=True); log = open(os.path.join(work, 'train.log'), 'a')
     def say(*a):
         s = ' '.join(str(x) for x in a); print(s, flush=True); log.write(s + '\n'); log.flush()
-    pool = json.load(open(os.path.join(work, 'pool.json'))); rng = random.Random(1234)
+    pool = json.load(open(os.path.join(work, 'pool.json'))); rng = random.Random(int(os.environ.get('GRPO_SEED', '1234')))
     ckpt = os.path.join(work, 'ckpt')
     if not os.path.exists(ckpt): shutil.copytree(start, ckpt)
     keys = list(safe_open(os.path.join(start, 'model.safetensors'), 'pt').keys())
@@ -102,7 +102,7 @@ def train_main(start, work, steps, n_prompts, group, lr, adv_mode='std', overlon
         if not os.path.exists(rf):
             torch.cuda.empty_cache()
             env = dict(os.environ, CUDA_VISIBLE_DEVICES=os.environ.get('GEN_GPU', '0'))
-            r = subprocess.run([sys.executable, __file__, 'gen', ckpt, pf, rf + '.tmp', str(group), str(100000 * step)], env=env,
+            r = subprocess.run([sys.executable, __file__, 'gen', ckpt, pf, rf + '.tmp', str(group), str(100000 * step + int(os.environ.get('GRPO_SEED', '1234')) - 1234)], env=env,
                                stdout=open(os.path.join(work, f'gen_{step}.log'), 'w'), stderr=subprocess.STDOUT)
             if r.returncode != 0: say('gen failed step', step); sys.exit(1)
             os.replace(rf + '.tmp', rf)

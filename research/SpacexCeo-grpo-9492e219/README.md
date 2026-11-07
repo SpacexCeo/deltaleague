@@ -82,3 +82,15 @@ Patch vs 9492e219: the 264 tensors of the run5 step-10 patch plus `model.languag
 test of whether the norm gain still adds after further GRPO.
 **Verified: private 48.0 (version `5dbf1229-af50-443f-8cd0-117f4688f4ed`), truncation 0.134 — rank #1**, +0.6 over the
 step-10 checkpoint alone (47.4). The single ×1.05 final-norm step has now added on the server on four parents.
+
+## Combining two independent GRPO continuations of 9492e219 (prepared, CPU-only analysis)
+Two GRPO runs from the same parent with different recipes: ours (run5 step 10, verified 47.4) and roshaans' d5fc95ea
+(ilblackdragon/deltaleague#58, verified 47.2). CPU weight analysis vs 9492e219: both change 262 shared tensors, delta
+norms 0.103 (ours) and 0.091 (roshaans), **cosine 0.024** overall (0.01–0.03 in every tensor family) — nearly orthogonal,
+largely because both deltas are dominated by bf16 single-ulp rounding moves.
+Candidates (patches vs 9492e219, final norm ×1.05 applied on top, as on four previous parents):
+- **soup**: 9492e219 + (Δ_ours + Δ_roshaans)/2 + norm ×1.05 (265 tensors)
+- **sum**: 9492e219 + Δ_ours + Δ_roshaans + norm ×1.05 (268 tensors)
+No GPU evaluation was run for these two (no compute available); prior evidence: a soup of two of our own seeds landed
+between them on the proxy, and scaling a single GRPO delta by 1.5 (ExPO) cost −5.6 proxy accuracy. Lineage credit:
+roshaans (d5fc95ea), ma4ypic4y (9492e219), poppingbean (×1.05 norm step), zavodil (norm on d5fc95ea, ilblackdragon/deltaleague#60).

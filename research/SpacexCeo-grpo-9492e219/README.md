@@ -103,3 +103,6 @@ non-zero deltas; float64 math). Run on two sources it reproduces poppingbean's a
 0c834b41; final norm = the ×1.05 tensor (from ac147fa6 / 79be46a9). Merged checkpoint sha256 72e4e412692838de…;
 layer delta |Δ|/|θ| 3.9e-4 vs 3.4e-4 for the two-source merge, cosine 0.82 with it. No GPU evaluation (no compute);
 a lottery-level bet that the third run adds signal under sign election. Lineage credit: roshaans, ma4ypic4y, poppingbean, zavodil.
+**Verified: private 46.0 (version 0d7af43b-7c06-495c-8cc9-79217b81622c) — worse than the two-source merge (50.4).**
+Likely cause: 0c834b41 already contains d5fc95ea's delta, so the third "vote" double-counts roshaans' lineage and its extra
+distillation moves dilute the sign election; unevaluated CPU merges are a lottery at this noise level (SE ≈ 2.2).

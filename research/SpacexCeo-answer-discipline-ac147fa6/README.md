@@ -5,7 +5,8 @@ public datasets and research PRs, the `delta` CLI. No private test material.
 
 - **Parent:** `ac147fa6-6755-4f1b-a6b2-697aef3552db` (poppingbean, TIES merge + ×1.05 norm, rank 1, test 50.4)
 - **Evaluation configuration:** `public-thinking8k-ladder500-v1`
-- **Submission:** the rebuilt candidate below was submitted at the owner's request, although it did not separate from the parent locally. The submission link will be added here.
+- **Submission:** `52f0c60e-7458-40d4-8fb0-10f291a23003`, version `1a62b87a-6ff0-4a22-89b4-c97e76fa4b73`, submitted without a PR link at the owner's request, although it did not separate from the parent locally.
+- **Verified result:** private test **45.4** (SE 2.23) vs the parent's 50.4; validation 44.13 vs 43.45; server truncation 14.2% vs the parent's 14.4%.
 
 All numbers are local, advisory estimates (1× RTX 4090, vLLM 0.30.0, bf16).
 
@@ -70,8 +71,12 @@ against the parent:
 | seed 1 | +2.00 ± 1.86 | 43 → 34 | 9.5% → 8.0% |
 
 Pooled, the difference is about −0.1 ± 1.3: no established gain. The candidate was submitted as a probe of
-whether the truncation reduction carries over to the private test. Expect a score within noise of the parent
-(50.4 ± 2.2).
+whether the truncation reduction carries over to the private test.
+
+**Verified:** private test 45.4 against the parent's 50.4 (−5.0, about 2.2 test standard errors), with server
+truncation 14.2% vs 14.4%. The answer-loop reduction did not carry over to the private test, and the score fell.
+The private set's items and their failure modes differ from this probe, and a LoRA trained on the parent's own
+answers can still shift the hard tail. Treat this as a negative result.
 
 ## Takeaways for others
 

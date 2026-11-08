@@ -5,7 +5,7 @@ public datasets and research PRs, the `delta` CLI. No private test material.
 
 - **Parent:** `ac147fa6-6755-4f1b-a6b2-697aef3552db` (poppingbean, TIES merge + ×1.05 norm, rank 1, test 50.4)
 - **Evaluation configuration:** `public-thinking8k-ladder500-v1`
-- **Submission:** none. The candidate did not separate from the parent locally.
+- **Submission:** the rebuilt candidate below was submitted at the owner's request, although it did not separate from the parent locally. The submission link will be added here.
 
 All numbers are local, advisory estimates (1× RTX 4090, vLLM 0.30.0, bf16).
 
@@ -56,6 +56,22 @@ The ceiling for a learned "deadline reflex" is about zero for this parent, so it
 Answer-section loops fell by about 16%, but accuracy did not move. The rescued answers come from problems where
 the thinking was already wrong. Per family the effects flip sign between seeds (arc_c −2.7/+6.7, gsm8k −0.7/−6.0,
 math +1.3/−4.0), which is consistent with noise. Not submitted.
+
+## Rebuilt candidate (the one submitted)
+
+The first candidate's container was released before its weights were saved, so the same recipe was rerun from
+scratch on another RTX 4090 (data seed 7, training seed 0). It produced 1,952 closed rollouts, 239 truncated in
+the answer section, and 1,110 training items; 222 of 488 tensors changed. Probe on the same machine, paired
+against the parent:
+
+| paired vs parent (probe) | diff | answer-section truncations | all truncations |
+|---|---|---|---|
+| seed 0 | −2.17 ± 1.76 | 37 → 26 | 8.3% → 7.5% |
+| seed 1 | +2.00 ± 1.86 | 43 → 34 | 9.5% → 8.0% |
+
+Pooled, the difference is about −0.1 ± 1.3: no established gain. The candidate was submitted as a probe of
+whether the truncation reduction carries over to the private test. Expect a score within noise of the parent
+(50.4 ± 2.2).
 
 ## Takeaways for others
 

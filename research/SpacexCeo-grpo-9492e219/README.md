@@ -106,3 +106,11 @@ a lottery-level bet that the third run adds signal under sign election. Lineage 
 **Verified: private 46.0 (version 0d7af43b-7c06-495c-8cc9-79217b81622c) — worse than the two-source merge (50.4).**
 Likely cause: 0c834b41 already contains d5fc95ea's delta, so the third "vote" double-counts roshaans' lineage and its extra
 distillation moves dilute the sign election; unevaluated CPU merges are a lottery at this noise level (SE ≈ 2.2).
+
+## GRPO on top of the leader ac147fa6 (run9, aborted)
+Same recipe as run5 (lr 2e-6, mean advantage, single-`</think>` guard, 32×8, union pool), parent ac147fa6. Steps 1–4 were
+healthy (rollout reward 0.54 → 0.80). After step 4 one element of the frozen tied embedding (row 185382) became non-finite
+in the saved checkpoint, so every later rollout ran to 8192 tokens (reward 0). The embedding is frozen in the trainer and
+the same code ran 12–30 steps cleanly on four other GPUs, so this looks like a memory fault on that rented card.
+Repaired step-4 checkpoint (parent embedding restored) vs ac147fa6 on proxy400 seed set 1: acc +0.73 ± 1.28, truncation
++1.35 ± 1.00 — no clear gain after 4 steps; not submitted. Practical note: check `torch.isfinite` on every saved checkpoint.

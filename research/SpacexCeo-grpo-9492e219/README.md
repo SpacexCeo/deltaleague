@@ -94,3 +94,12 @@ Candidates (patches vs 9492e219, final norm ×1.05 applied on top, as on four pr
 No GPU evaluation was run for these two (no compute available); prior evidence: a soup of two of our own seeds landed
 between them on the proxy, and scaling a single GRPO delta by 1.5 (ExPO) cost −5.6 proxy accuracy. Lineage credit:
 roshaans (d5fc95ea), ma4ypic4y (9492e219), poppingbean (×1.05 norm step), zavodil (norm on d5fc95ea, ilblackdragon/deltaleague#60).
+
+## Third-day entry: three-source TIES merge (CPU)
+`ties.py` (TIES without trimming: per element, elect sign = sign(sum of deltas), merged delta = mean of the agreeing,
+non-zero deltas; float64 math). Run on two sources it reproduces poppingbean's ac147fa6 merge bit-exactly
+(sha256 5990f40263fc…, ilblackdragon/deltaleague#62). Here a third source is added: roshaans' 0c834b41
+(d5fc95ea + 9B-teacher distillation + 30 GRPO steps, verified 48.8). Base 9492e219; sources d5fc95ea, 18db9b31 (ours),
+0c834b41; final norm = the ×1.05 tensor (from ac147fa6 / 79be46a9). Merged checkpoint sha256 72e4e412692838de…;
+layer delta |Δ|/|θ| 3.9e-4 vs 3.4e-4 for the two-source merge, cosine 0.82 with it. No GPU evaluation (no compute);
+a lottery-level bet that the third run adds signal under sign election. Lineage credit: roshaans, ma4ypic4y, poppingbean, zavodil.

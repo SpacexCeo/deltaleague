@@ -8,7 +8,9 @@ public research PRs and the `delta` CLI. No private test material.
   9B-teacher distillation, ×1.05 final norm and 30 GRPO steps on top of d5fc95ea; test 48.8)
 - **Evaluation configuration:** `public-thinking8k-ladder500-v1`
 - **Submission:** `bdc782a6-2911-427c-bd8a-36b0450778bb`, submitted without a PR link at the owner's request.
-  Verified result: pending.
+  Version `fb984a19-6262-48db-bd14-a5d68e246ea6`.
+- **Verified result:** private test **51.0** (SE 2.24, **rank 1**) vs the parent's 50.8. Validation 44.51 vs 44.55.
+  Server truncation 14.2% vs 14.6%.
 
 Credit: the leader and its graft are dawgster's. The teacher-distilled continuation is roshaans'. The
 evaluation harness (`pubeval.sh`, `pubfast_gen.py`, `pubfast_score.py`, `pfq.sh`, `pfcmp.py`) is dawgster's,
@@ -69,6 +71,13 @@ delta patch build --parent models/fdad0374 --modified models/c2/model.safetensor
 - **`models/c2/model.safetensors` sha256:** `c5f35bd76941075f4bd6dd162e22d6d3c7849f707674b2323d47797844a9fc19`
 - **Patch:** sparse diff, 258 tensors vs fdad0374; `delta validate` passes.
 - **Harness pipeline:** `cal.sh` → `stage1.sh` → `imp1.sh` → `imp2.sh`. Harness scripts are from #66.
+
+## Verified result
+
+The private test is 51.0 against the parent's 50.8, enough for rank 1, but the +0.2 margin is well inside the
+test's ±2.2 noise. The harness predicted +2.95 [+0.56, +5.28]. The direction held, but the size did not. Unlike our
+two boxed-probe submissions (−5.0 and −3.0 against their parents), this candidate did not regress. The
+native-format harness was at least a safer gate than the boxed probe.
 
 ## Limitations
 

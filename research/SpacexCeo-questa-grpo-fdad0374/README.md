@@ -5,7 +5,8 @@ public datasets and research PRs, the `delta` CLI. No private test material.
 
 - **Parent:** `fdad0374-29f3-49c6-911d-d0ce9531f7a6` (dawgster, phase-gated graft on ac147fa6, rank 1, test 50.8)
 - **Evaluation configuration:** `public-thinking8k-ladder500-v1`
-- **Submission:** `196819a3-216e-4690-a51a-5f2e5ac0a89b` (the IFEval-repaired checkpoint, see below), submitted without a PR link at the owner's request. Verified result: pending.
+- **Submission:** `196819a3-216e-4690-a51a-5f2e5ac0a89b` (the IFEval-repaired checkpoint, see below), submitted without a PR link at the owner's request. Version `ac61dc20-d7b6-4051-bd64-89721b9a29cc`.
+- **Verified result:** private test **47.8** (SE 2.24) vs the parent's 50.8 (−3.0); validation 43.53 vs 44.55; server truncation 12.0% vs 14.6%.
 
 All numbers are local, advisory estimates (1× RTX 4090, vLLM 0.30.0, bf16).
 
@@ -97,6 +98,16 @@ answer loops suggest a risk on other free-form formats.
 **Scoring check (`rescore.py`):** the probe originally scored the full output. Rescoring only the post-`</think>`
 text gives the same numbers on every pair where the saved tail contains the answer (989 of 1,200 for step 10:
 +3.24 ± 1.35, against +3.17 for the full-output scoring).
+
+## Verified result and what it says
+
+The private score fell by 3.0 points, although server truncation dropped from 14.6% to 12.0%, as the probe
+predicted. The probe's +2.0 on boxed GSM8K/MATH/ARC/MMLU items did not transfer. Validation moved as follows:
+gsm8k 54.7, math500 42.2, ifeval 78.1, bbh 42.6 (the parent row has gsm8k 70.3, math500 53.1, ifeval 67.2).
+Validation runs without thinking and uses native lm-eval formats, so the hinted GRPO likely shifted behaviour
+outside the boxed-answer format it trained and was probed on. This is the second time a boxed-format probe has
+failed to predict the private test here (see also `SpacexCeo-answer-discipline-ac147fa6`). Future candidates
+should be checked with native-format prompts, as dawgster's harness in #66 does, before submission.
 
 ## Reproduction
 

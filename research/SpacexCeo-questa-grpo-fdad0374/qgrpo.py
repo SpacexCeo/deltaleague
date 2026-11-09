@@ -140,7 +140,8 @@ def score_one(args):
     if truncated or "</think>" not in text:
         return 0.0
     try:
-        return score_answer(item, text)
+        # the current shared scorer expects the post-thinking text
+        return score_answer(item, text.split("</think>")[-1].split("<|im_end|>")[0])
     except Exception:
         return 0.0
 

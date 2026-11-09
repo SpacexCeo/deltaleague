@@ -79,7 +79,7 @@ def main():
             tr = len(ids) >= a.max_tokens
             sc = 0.0 if (tr or close is None) else score_answer(it, c.text)
             rows.append({"k": k, "src": it["src"], "tokens": len(ids), "close": close, "truncated": tr, "score": sc,
-                         "ids": ids, "prompt": pr, **({"text": c.text} if tr else {"tail": c.text[-1500:]})})
+                         "ids": ids, "prompt": pr, **({"text": c.text} if tr else {"tail": c.text[-6000:]})})
     exit_text = EXITS[a.exit]; exit_ids = tok(exit_text, add_special_tokens=False)["input_ids"]
     for D in a.deadline:
         need = [r for r in rows if r["close"] is None or r["close"] >= D]
